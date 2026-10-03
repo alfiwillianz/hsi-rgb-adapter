@@ -23,7 +23,7 @@ model:
   masked_attn: true
   mask_anneal: {start: 0.1, end: 0.6}
 train:
-  iters: 20000
+  iters: 4000                  # chosen on val for A (rgb): 2k 0.80, 4k 0.81, 8k 0.73, 20k 0.42 final IoU
   batch_size: 8
   lr: 1.0e-4
   backbone_lr_mult: 0.1
@@ -32,7 +32,7 @@ train:
   clip: 1.0
   workers: 6
   log_every: 50
-  eval_every: 2000
+  eval_every: 500
   loss_res: 224
 eval:
   overlap_stride: 0.75         # sliding-window stride as a fraction of the crop
