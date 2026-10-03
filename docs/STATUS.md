@@ -20,15 +20,25 @@ _Last updated: 2026-10-03_
       Their `json2png.py` revealed Label Studio names drop the parentheses; matching fixed.
 - [x] Zips extracted into `data/raw/` (needed `UNZIP_DISABLE_ZIPBOMB_DETECTION=TRUE`).
 
+- [x] `prepare.py` ran on the real data (2026-10-03) -> `data/afa_bin5` (15 GB, 60 bands, 385-1011 nm,
+      log in `data/prepare.log`). 147 cubes: train 89, val 17, test 41. Findings:
+      - `Normal_*` masks are blank 900x1000 RGB PNGs (transposed vs. the cube); all zeros, now accepted as empty.
+      - Test `Normal_11/12/13` RGB PNGs are transposed vs. their cubes. They are the anti-transpose
+        (corr 0.97-0.99 with cube bands, <=0.2 for every other orientation). `prepare.py` now
+        auto-orients RGB (refuses below corr 0.9) and records `rgb_transform` per sample in `meta.json`.
+      - Saturated uint16 cubes (max 65535) overflowed float16 when binning; now clipped at 65504. Some
+        cubes still hold values >> 10000 (max per-band std 2104), so normalisation is dominated by highlights.
+      - Val has no Label Studio JSON (only `Note.txt`): val instances come from connected components.
+        Train polygons 80/80 anomalous cubes, test 38/38.
+      - Material labels found: `ForeignBody`, `abnormal`. Every train instance label is id 0 (`ForeignBody`),
+        so `class_mode: material` has no variety on train; also id 0 collides with "unlabelled" (0).
+
 ## In progress
-- [ ] Running `prepare.py` on the real data.
+- [ ] Verify one RGB + mask overlay visually, then smoke config on GPU.
 
 ## Next
-1. Confirm val/test also have `RGB/PNG` and one mask per cube.
-2. `python tools/prepare.py --root data/raw --out data/afa_bin5 --bin 5`. Verify in the log: every cube says
-   `(polygons)`, the material label list (decides whether `class_mode: material` is possible), fg
-   fractions look sane, `rgb=` matches expectations, and `meta.json` has
-   wavelengths spanning about 400–1000 nm.
+1. Decide on `class_mode: material` (see findings: effectively one class on train).
+2. Check the highlight/saturation handling in normalisation (values >> 10000).
 3. Run `configs/smoke.yaml` end to end once (dataloader, val loop, checkpointing are untested on GPU).
 4. Short real runs (`--set train.iters=2000 train.eval_every=500`) for A (`rgb_eomt`) and D
    (`hsi_last_blocks`) to confirm val IoU moves and to measure it/s and memory.
