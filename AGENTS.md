@@ -42,10 +42,15 @@ tools/
 
 - Training box `hal9000`: Ryzen 5 7500F (6 cores), 32 GB DDR5, RTX 5060 Ti 16 GB, CachyOS, headless,
   reached over SSH/Tailscale. One GPU, so run experiments sequentially.
-- Raw data (cold, DRAM-less SSD): `~/Projects/afa/raw/`
-- Prepared cache (fast SSD with DRAM): `~/Active/afa/afa_bin5/`. Point configs here with
-  `--set data.root=$HOME/Active/afa/afa_bin5`, or edit `configs/base.yaml`.
-- Zips downloaded to `~/data/afa/` (to delete after prepare succeeds).
+- Repo lives at `~/Active/hsi-rgb-adapter` (SSD with DRAM). Data sits inside it under the
+  git-ignored `data/`:
+  - raw release: `data/raw/{train,val,test}_UseCase_1_(Avoine1)/` with `HSI-Hybercube/` and
+    `Annotation/{JSON,PNG}/`. There are **no RGB projections** in the release; `prepare.py`
+    synthesizes a true-colour composite (`rgb_source: synthesized_truecolor` in `meta.json`).
+  - prepared cache: `data/afa_bin5/`, which is the default `data.root` in `configs/base.yaml`.
+- Zips downloaded to `~/data/afa/` (MD5-verified; delete after prepare succeeds).
+- Unzipping needs `UNZIP_DISABLE_ZIPBOMB_DETECTION=TRUE` (Info-ZIP false positive on these ZIP64
+  archives) or `bsdtar -xf`.
 - Never modify or delete anything under `raw/`. Re-running `prepare.py` must stay possible.
 
 ## Commands
@@ -53,7 +58,7 @@ tools/
 ```bash
 pip install -r requirements.txt
 python tools/smoke_test.py                                   # must print "all checks passed"
-python tools/prepare.py --root <dir with train/ val/ test/> --out ~/Active/afa/afa_bin5 --bin 5
+python tools/prepare.py --root data/raw --out data/afa_bin5 --bin 5
 python train.py --config configs/hsi_spec_branch.yaml [--set key.sub=value ...]
 python train.py --config configs/<cfg>.yaml --eval_only --ckpt runs/<cfg>/best.pt --split test --save_preds
 ```
@@ -101,7 +106,7 @@ Outputs go to `runs/<config name>/`: `config.yaml` (resolved), `log.jsonl` (trai
 - Loss targets are downsampled with **max-pool** (`loss_res`) to keep thin objects (threads, shards)
   from vanishing. Keep this in mind before switching to area/bilinear.
 - `prepare.py` assumptions **not yet verified on the real release** (see `docs/STATUS.md`): split
-  folders `train/ val/ test/`, cube folder name `HSI-Hybercube` (sic, globbed as `HSI-Hy*`),
+  folders `train/` or `train_*/` (release uses the latter), cube folder name `HSI-Hybercube` (sic, globbed as `HSI-Hy*`),
   `Annotation/PNG` and `Annotation/JSON`, `RGB/PNG`, mask PNG name = cube stem, Label Studio JSON
   with `image` + `label[].points` in percent and optional `polygonlabels`. If prepare logs
   `(components)` instead of `(polygons)`, the JSON matching failed. Investigate before training

@@ -10,18 +10,20 @@ _Last updated: 2026-10-03_
       spectral branch is a no-op at init, shapes OK, LoRA trainability OK, loss 44.6 → 0.76 on a
       fixed batch, annealing ends at plain attention.
 
+- [x] Dataset downloaded to `~/data/afa/` (train 37 GiB, val 7 GiB, test 17 GiB), MD5 checked.
+- [x] Release layout seen: `{train,val,test}_UseCase_1_(Avoine1)/` with `HSI-Hybercube/` and
+      `Annotation/{JSON,PNG}/`, **no RGB folder**. `prepare.py` fixed to resolve `<split>_*` folders
+      and synthesize true-colour RGB (2026-10-03).
+
 ## In progress
-- [ ] Dataset download (train 37 GiB, val 7 GiB, test 17 GiB) to `~/data/afa/` with aria2c.
-      Signed links expire about 4 h after 2026-10-03 20:16 WIB; get fresh ones from the DOI page if a
-      download dies after that.
+- [ ] Extracting zips into `data/raw/` (needs `UNZIP_DISABLE_ZIPBOMB_DETECTION=TRUE`; plain unzip
+      aborts with a false "zip bomb" error).
 
 ## Next
-1. Unzip to `~/Projects/afa/raw/`. Check the layout (`find ~/Projects/afa/raw -maxdepth 4 -type d`)
-   and confirm the folder holding `train/ val/ test/`. Each zip may nest under a
-   `UseCase_1_(Avoine1)/` folder, in which case merge them or pass the right `--root`.
-2. `prepare.py --bin 5 --out ~/Active/afa/afa_bin5`. Verify in the log: every cube says
+1. After extraction, confirm there is still no `RGB/` folder (`find data/raw -maxdepth 3 -type d`).
+2. `python tools/prepare.py --root data/raw --out data/afa_bin5 --bin 5`. Verify in the log: every cube says
    `(polygons)`, the material label list (decides whether `class_mode: material` is possible), fg
-   fractions look sane, the RGB projection was found for every cube, and `meta.json` has
+   fractions look sane, `rgb=` matches expectations, and `meta.json` has
    wavelengths spanning about 400–1000 nm.
 3. Run `configs/smoke.yaml` end to end once (dataloader, val loop, checkpointing are untested on GPU).
 4. Short real runs (`--set train.iters=2000 train.eval_every=500`) for A (`rgb_eomt`) and D
@@ -31,8 +33,8 @@ _Last updated: 2026-10-03_
 
 ## Untested / open questions
 - Real-release folder names and JSON format (see AGENTS.md "fragile" section).
-- Whether the RGB projections are pixel-aligned with the cubes (prepare resizes if sizes differ).
-  Visually check one overlay.
+- The synthesized true-colour RGB uses a per-image percentile stretch. Check a few by eye, and
+  decide whether a global stretch is fairer for the RGB baseline.
 - Whether cubes are reflectance-calibrated (check the `.hdr` and the value ranges).
 - Throughput and memory for ViT-S at 448 crops / batch 8 with the 60-band input.
 

@@ -10,7 +10,8 @@ survive the shift from RGB to 300-band VNIR spectra, and what is the smallest ch
 recovers the spectral information RGB cannot express?
 
 Target data: HSI-AgriFoodAnomaly [4]
-(147 conveyor cubes, 400–1000 nm, 300 bands, 1000×900, pixel masks + polygons, paired RGB).
+(147 conveyor cubes, 400–1000 nm, 300 bands, 1000×900, pixel masks + polygons). The release has
+no RGB images, so the RGB baseline uses a true-colour composite synthesized from the cube.
 
 ## Model
 
@@ -44,11 +45,13 @@ pip install -r requirements.txt
 # DINOv2 weights download from the Hugging Face hub on first run (timm).
 ```
 
-1. Download the dataset [4] from <https://doi.org/10.57745/QTLG7X> (non-commercial research use).
+1. Download the dataset [4] from <https://doi.org/10.57745/QTLG7X> (non-commercial research use) and
+   extract the three zips into `data/raw/`. Info-ZIP may refuse them as a "zip bomb" (false positive):
+   use `UNZIP_DISABLE_ZIPBOMB_DETECTION=TRUE unzip ...` or `bsdtar -xf ...`.
 2. Build the cache (bands averaged in groups of 5 → 60 bands, float16, about 108 MB per cube):
 
 ```bash
-python tools/prepare.py --root /path/to/Anomaly_Easy --out data/afa_bin5 --bin 5
+python tools/prepare.py --root data/raw --out data/afa_bin5 --bin 5
 ```
 
    This prints the material labels it found in the polygon JSON. If there are any,
@@ -66,7 +69,7 @@ python train.py --config configs/smoke.yaml
 
 | id | config | input | what trains | question |
 |----|--------|-------|-------------|----------|
-| A | `rgb_eomt` | shipped RGB | query blocks + heads | RGB reference |
+| A | `rgb_eomt` | true-colour composite | query blocks + heads | RGB reference |
 | B | `pca3_eomt` | PCA→3 | same | naive HSI→RGB |
 | C | `hsi_pe_only` | HSI | patch embed + queries + heads (cf. Panopticon-PE [12]) | frozen ViT (PMT [13] predicts collapse) |
 | D | `hsi_last_blocks` | HSI | patch embed + query blocks | simplest spectral EoMT |
