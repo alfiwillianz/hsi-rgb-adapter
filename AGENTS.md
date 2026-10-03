@@ -79,7 +79,11 @@ Outputs go to `runs/<config name>/`: `config.yaml` (resolved), `log.jsonl` (trai
 - Run `tools/smoke_test.py` after touching `model.py`, `loss.py` or `data.py`. Extend it when adding a
   model feature: zero-init / no-op-at-init properties are cheap to test and easy to break.
 - `runs/`, `data/`, `*.npy`, `*.pt` are git-ignored. Don't commit checkpoints or data.
-- Commits: small and descriptive. The owner reviews diffs, so don't rewrite history on `main`.
+- Commits: small, one logical change each, Conventional Commits style, imperative and lower-case
+  after the prefix: `feat:` new capability · `fix:` bug fix · `exp:` new/changed experiment configs or
+  run results · `docs:` docs and STATUS updates · `refactor:` · `perf:` · `test:` · `chore:` deps,
+  tooling, cleanup. Examples: `fix: handle nested UseCase folder in prepare.py`,
+  `exp: add pe_init sweep configs`. The owner reviews diffs, so don't rewrite history on `main`.
 
 ## Things that are fragile, read before editing
 
