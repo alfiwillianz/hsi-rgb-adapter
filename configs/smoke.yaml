@@ -1,0 +1,8 @@
+# End-to-end pipeline check on the synthetic dataset (CPU-friendly, random-init ViT).
+#   python tools/make_synthetic.py --out data/synthetic_raw
+#   python tools/prepare.py --root data/synthetic_raw --out data/synthetic --bin 4
+#   python train.py --config configs/smoke.yaml
+base: base.yaml
+data: {root: data/synthetic, crop: 112}
+model: {backbone: vit_small_patch14_reg4_dinov2, pretrained: false, num_queries: 8, spectral_branch: true}
+train: {iters: 60, batch_size: 4, workers: 0, log_every: 10, eval_every: 30, warmup: 10, loss_res: 56, lr: 3.0e-4}

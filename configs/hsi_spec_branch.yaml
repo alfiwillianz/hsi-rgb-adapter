@@ -1,0 +1,3 @@
+# E. D + zero-init spectral branch injected into the query blocks (proposed)
+base: base.yaml
+model: {freeze: early, spectral_branch: true, inject: query_blocks}

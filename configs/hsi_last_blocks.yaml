@@ -1,0 +1,3 @@
+# D. Spectral patch embed + trainable query blocks (main simple model)
+base: base.yaml
+model: {freeze: early}

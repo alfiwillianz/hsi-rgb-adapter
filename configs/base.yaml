@@ -1,0 +1,40 @@
+# Shared defaults. Sized for a single 16 GB GPU (ViT-S/14, 448 crops, bf16).
+seed: 0
+out_dir: runs
+data:
+  root: data/afa_bin5          # output of tools/prepare.py
+  modality: hsi                # hsi | rgb | pca3
+  class_mode: binary           # binary (foreign object) | material (needs polygon labels)
+  crop: 448                    # multiple of 14
+  fg_prob: 0.7                 # fraction of crops centred on a foreign object
+model:
+  backbone: vit_small_patch14_reg4_dinov2.lvd142m
+  pretrained: true
+  num_queries: 32
+  num_query_blocks: 4          # EoMT L2: queries enter before the last 4 blocks
+  num_upscale: 2               # mask resolution = patch grid x 4
+  pe_init: wavelength_vis      # wavelength | wavelength_vis | mean | zero
+  train_patch_embed: true
+  freeze: early                # none | early (blocks before queries) | blocks (all)
+  lora_rank: 0
+  spectral_branch: false
+  spectral_dim: 128
+  inject: query_blocks         # query_blocks | all
+  masked_attn: true
+  mask_anneal: {start: 0.1, end: 0.6}
+train:
+  iters: 20000
+  batch_size: 8
+  lr: 1.0e-4
+  backbone_lr_mult: 0.1
+  weight_decay: 0.05
+  warmup: 500
+  clip: 1.0
+  workers: 6
+  log_every: 50
+  eval_every: 2000
+  loss_res: 224
+eval:
+  overlap_stride: 0.75         # sliding-window stride as a fraction of the crop
+  thr: 0.5
+  min_area: 50                 # px for an image-level "foreign object present" call

@@ -1,0 +1,3 @@
+# B. PCA-to-3-channel input into the unmodified RGB patch embed
+base: base.yaml
+data: {modality: pca3}

@@ -1,0 +1,3 @@
+# A. RGB baseline: same recipe on the shipped RGB projection
+base: base.yaml
+data: {modality: rgb}
