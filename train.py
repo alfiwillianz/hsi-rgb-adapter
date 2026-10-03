@@ -92,7 +92,7 @@ def main():
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
     dc, tc, ec = cfg["data"], cfg["train"], cfg.get("eval", {})
-    train_data = AFAData(dc["root"], "train", dc["modality"], dc.get("class_mode", "binary"))
+    train_data = AFAData(dc["root"], "train", dc["modality"], dc.get("class_mode", "binary"), dc.get("clip_z"))
     model = build_model(cfg, train_data).to(device)
     n_train = sum(p.numel() for p in model.parameters() if p.requires_grad)
     n_all = sum(p.numel() for p in model.parameters())
@@ -103,7 +103,7 @@ def main():
     if args.eval_only:
         sd = torch.load(args.ckpt, map_location="cpu")
         model.load_state_dict(sd["model"])
-        data = AFAData(dc["root"], args.split, dc["modality"], dc.get("class_mode", "binary"))
+        data = AFAData(dc["root"], args.split, dc["modality"], dc.get("class_mode", "binary"), dc.get("clip_z"))
         res = evaluate(model, data, tile, stride, device, ec.get("thr", 0.5), ec.get("min_area", 50),
                        os.path.join(out_dir, f"preds_{args.split}") if args.save_preds else None)
         print(json.dumps(res, indent=1))
@@ -113,7 +113,7 @@ def main():
 
     with open(os.path.join(out_dir, "config.yaml"), "w") as f:
         yaml.safe_dump(cfg, f)
-    val_data = AFAData(dc["root"], "val", dc["modality"], dc.get("class_mode", "binary"))
+    val_data = AFAData(dc["root"], "val", dc["modality"], dc.get("class_mode", "binary"), dc.get("clip_z"))
     iters, bs = tc["iters"], tc["batch_size"]
     ds = TrainCrops(train_data, dc["crop"], iters * bs, dc.get("fg_prob", 0.7))
     dl = DataLoader(ds, batch_size=bs, num_workers=tc.get("workers", 4), collate_fn=collate,
@@ -121,7 +121,7 @@ def main():
                     worker_init_fn=_seed_worker)
     crit = SetCriterion(train_data.num_classes, loss_res=tc.get("loss_res", dc["crop"] // 2)).to(device)
     opt = torch.optim.AdamW(model.param_groups(tc["lr"], tc.get("backbone_lr_mult", 0.1),
-                                               tc.get("weight_decay", 0.05)))
+                                               tc.get("weight_decay", 0.05), tc.get("pe_lr_mult")))
     base_lrs = [g["lr"] for g in opt.param_groups]
     warm = tc.get("warmup", 200)
     amp = device.type == "cuda"

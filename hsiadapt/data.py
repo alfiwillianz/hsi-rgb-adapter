@@ -23,7 +23,9 @@ IMAGENET_STD = np.array([0.229, 0.224, 0.225], np.float32)[:, None, None]
 class AFAData:
     """Shared loader: memmaps cubes, keeps masks / instance maps in RAM."""
 
-    def __init__(self, root: str, split: str, modality: str = "hsi", class_mode: str = "binary"):
+    def __init__(self, root: str, split: str, modality: str = "hsi", class_mode: str = "binary",
+                 clip_z: float | None = None):
+        self.clip_z = clip_z  # clip normalized HSI values to [-clip_z, clip_z] (saturated highlights reach z~100)
         self.root, self.split, self.modality, self.class_mode = root, split, modality, class_mode
         with open(os.path.join(root, "meta.json")) as f:
             self.meta = json.load(f)
@@ -64,6 +66,8 @@ class AFAData:
             a = (a - IMAGENET_MEAN) / IMAGENET_STD
         else:
             a = (np.asarray(self.cubes[i][:, y0:y1, x0:x1], np.float32) - self.mean) / self.std
+            if self.clip_z:
+                np.clip(a, -self.clip_z, self.clip_z, out=a)
             if self.modality == "pca3":
                 a = np.einsum("kc,chw->khw", self.pca, a)
                 a = (a - self.pca_mean) / self.pca_std

@@ -1,3 +1,3 @@
 # G. Full fine-tune (upper bound / overfitting check)
-base: base.yaml
+base: hsi_base.yaml
 model: {freeze: none}

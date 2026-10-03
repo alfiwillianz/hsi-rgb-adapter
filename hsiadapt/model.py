@@ -232,15 +232,24 @@ class SpectralEoMT(nn.Module):
         self._pretrained_ids = {id(p) for n, p in v.named_parameters() if ".A" not in n[-2:] and ".B" not in n[-2:]}
         self._pretrained_ids -= {id(v.patch_embed.proj.weight)} if v.patch_embed.proj.weight.shape[1] != 3 else set()
 
-    def param_groups(self, lr: float, backbone_lr_mult: float, wd: float):
-        new, pre = [], []
+    def param_groups(self, lr: float, backbone_lr_mult: float, wd: float, pe_lr_mult: float | None = None):
+        """pe_lr_mult: LR multiplier for the patch embed (None = old behaviour: an inflated C-band
+        weight counts as new and gets the full LR, a pretrained 3-band one the backbone LR)."""
+        pe_ids = {id(p) for p in self.vit.patch_embed.parameters()} if pe_lr_mult is not None else set()
+        new, pre, pe = [], [], []
         for p in self.parameters():
             if p.requires_grad:
-                (pre if id(p) in self._pretrained_ids else new).append(p)
-        return [
+                if id(p) in pe_ids:
+                    pe.append(p)
+                else:
+                    (pre if id(p) in self._pretrained_ids else new).append(p)
+        groups = [
             {"params": new, "lr": lr, "weight_decay": wd},
             {"params": pre, "lr": lr * backbone_lr_mult, "weight_decay": wd},
         ]
+        if pe:
+            groups.append({"params": pe, "lr": lr * pe_lr_mult, "weight_decay": wd})
+        return groups
 
     # ------------------------------------------------------------------ heads
     def _predict(self, x, gh, gw):

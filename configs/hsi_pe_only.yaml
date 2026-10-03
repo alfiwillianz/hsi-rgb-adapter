@@ -1,3 +1,3 @@
 # C. Frozen ViT, train only spectral patch embed + queries + heads (Panopticon-PE-like; PMT predicts this collapses)
-base: base.yaml
+base: hsi_base.yaml
 model: {freeze: blocks}

@@ -1,3 +1,3 @@
 # F. Frozen blocks + LoRA r=16 on every block (PEFT baseline)
-base: base.yaml
+base: hsi_base.yaml
 model: {freeze: blocks, lora_rank: 16}

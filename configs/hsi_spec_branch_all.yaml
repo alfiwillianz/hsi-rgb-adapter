@@ -1,3 +1,3 @@
 # E2. spectral branch injected into every block
-base: base.yaml
+base: hsi_base.yaml
 model: {freeze: early, spectral_branch: true, inject: all}

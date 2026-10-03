@@ -1,0 +1,7 @@
+# Shared defaults for all 60-band HSI configs (C-H). Chosen on val with D (seed 0, 4000 iters):
+#   pe_lr_mult: the inflated C-band patch embed used to get the full LR (10x A's RGB patch embed), which
+#     drifted the frozen blocks' input: val IoU 0.55 at 1.0x -> 0.77 at 0.1x -> 0.81 at 0.03x / 0.01x.
+#   clip_z: saturated highlights reach z~100 after per-band normalisation (RGB saturates at ~2.5).
+base: base.yaml
+data: {clip_z: 3}
+train: {pe_lr_mult: 0.03}
