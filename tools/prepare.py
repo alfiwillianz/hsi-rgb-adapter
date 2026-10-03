@@ -9,7 +9,10 @@ and a <out>/meta.json with binned wavelengths, train-set per-band mean/std, a 3-
 PCA (for the PCA-to-RGB baseline), material label names and the sample list.
 
 Usage:
-  python tools/prepare.py --root /data/HSI-AgriFoodAnomaly/Anomaly_Easy --out data/afa_bin5 --bin 5
+  python tools/prepare.py --root data/raw --out data/afa_bin5 --bin 5
+
+Split folders may be named exactly train/ val/ test/ or train_*/ val_*/ test_*/ (as in the release).
+If a cube has no RGB projection, a true-colour composite is synthesized from the cube.
 """
 from __future__ import annotations
 
@@ -33,6 +36,33 @@ def find_dir(split_dir: str, *patterns: str) -> str | None:
         if hits:
             return hits[0]
     return None
+
+
+def split_dir(root: str, split: str) -> str:
+    """Resolve <root>/<split>, or <root>/<split>_* (the release ships e.g. 'train_UseCase_1_(Avoine1)')."""
+    exact = os.path.join(root, split)
+    if os.path.isdir(exact):
+        return exact
+    hits = sorted(d for d in glob.glob(os.path.join(glob.escape(root), split + "_*")) if os.path.isdir(d))
+    if len(hits) > 1:
+        raise RuntimeError(f"Several folders match split '{split}': {hits}")
+    return hits[0] if hits else exact
+
+
+def pseudo_rgb(cube, wl: list[float] | None) -> np.ndarray:
+    """True-colour composite from the bands nearest 610/545/465 nm, 0.5-99.5 percentile stretch
+    per channel (per image). Used only when the release has no RGB projection."""
+    C = cube.shape[0]
+    if wl:
+        idx = [int(np.argmin(np.abs(np.asarray(wl) - t))) for t in (610.0, 545.0, 465.0)]
+    else:
+        idx = [int(C * f) for f in (0.35, 0.25, 0.12)]
+    out = []
+    for i in idx:
+        b = np.asarray(cube[i], np.float32)
+        lo, hi = np.percentile(b[::4, ::4], (0.5, 99.5))
+        out.append(np.clip((b - lo) / max(hi - lo, 1e-6), 0, 1))
+    return (np.stack(out, -1) * 255).astype(np.uint8)
 
 
 def load_label_studio(json_dir: str | None) -> dict[str, list[dict]]:
@@ -119,7 +149,7 @@ def main():
 
     # first pass over JSON to collect material label names (stable ids)
     for split in args.splits:
-        sd = os.path.join(args.root, split)
+        sd = split_dir(args.root, split)
         tbl = load_label_studio(find_dir(sd, "Annotation/JSON", "Annotation/json"))
         for polys in tbl.values():
             for p in polys:
@@ -128,7 +158,7 @@ def main():
     meta["material_labels"] = sorted(label_ids, key=label_ids.get)
 
     for split in args.splits:
-        sd = os.path.join(args.root, split)
+        sd = split_dir(args.root, split)
         cube_dir = find_dir(sd, "HSI-Hy*", "HSI*", "*cube*")
         mask_dir = find_dir(sd, "Annotation/PNG", "Annotation/png")
         rgb_dir = find_dir(sd, "RGB/PNG", "RGB")
@@ -176,13 +206,17 @@ def main():
                         im = im.resize((W, H), Image.BILINEAR)
                     rgb_path = stem + "_rgb.png"
                     im.save(os.path.join(od, rgb_path))
+            rgb_source = "release" if rgb_path else "synthesized_truecolor"
+            if rgb_path is None:
+                rgb_path = stem + "_rgb.png"
+                Image.fromarray(pseudo_rgb(cube, wl)).save(os.path.join(od, rgb_path))
             samples.append({
                 "stem": stem, "H": H, "W": W, "fg_pixels": int(mask.sum()),
                 "num_instances": int(inst.max()), "instance_labels": inst_labels,
-                "instance_source": src, "rgb": rgb_path,
+                "instance_source": src, "rgb": rgb_path, "rgb_source": rgb_source,
             })
             print(f"[{split}] {stem}: {C}->{Cb} bands, {H}x{W}, fg={mask.mean():.4f}, "
-                  f"inst={inst.max()} ({src})", flush=True)
+                  f"inst={inst.max()} ({src}), rgb={rgb_source}", flush=True)
         meta["splits"][split] = samples
         meta["num_bands"] = Cb if samples else meta.get("num_bands")
 
