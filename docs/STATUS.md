@@ -1,6 +1,6 @@
 # Status
 
-_Last updated: 2026-10-03_
+_Last updated: 2026-10-04_
 
 ## Done
 - [x] Codebase scaffolded: data prep, Spectral EoMT model, loss, eval, train loop, ablation configs.
@@ -33,16 +33,25 @@ _Last updated: 2026-10-03_
       - Material labels found: `ForeignBody`, `abnormal`. Every train instance label is id 0 (`ForeignBody`),
         so `class_mode: material` has no variety on train; also id 0 collides with "unlabelled" (0).
 
+- [x] RGB/mask overlay checked (2026-10-03): shipped RGB is aligned with the masks. `configs/smoke.yaml`
+      and a 2000-iter real run work on GPU: ~4.9 it/s, ~6 GB for ViT-S/448/batch 8 (RGB input).
+- [x] **A (`rgb_eomt`) done (2026-10-04)**, 3 seeds, 4000 iters (~14 min each), checkpoint chosen on val.
+      Schedule length was selected on val with seed 0 (final val FO-IoU: 2k 0.80, 4k 0.81, 8k 0.73,
+      20k 0.42; best-over-run for 20k only 0.64). `base.yaml` now uses `iters: 4000`, `eval_every: 500`
+      for all configs. The 20k collapse is unexplained: lower train loss, but the model under-segments
+      (precision 0.95, recall 0.42) even on train cubes, missing low-contrast objects and stacking
+      several queries on one object. Archived in `runs/rgb_eomt_20k_s0`. Watch for it in HSI runs.
+
 ## In progress
-- [ ] Verify one RGB + mask overlay visually, then smoke config on GPU.
+- [ ] D (`hsi_last_blocks`) next.
 
 ## Next
 1. Decide on `class_mode: material` (see findings: effectively one class on train).
 2. Check the highlight/saturation handling in normalisation (values >> 10000).
-3. Run `configs/smoke.yaml` end to end once (dataloader, val loop, checkpointing are untested on GPU).
-4. Short real runs (`--set train.iters=2000 train.eval_every=500`) for A (`rgb_eomt`) and D
-   (`hsi_last_blocks`) to confirm val IoU moves and to measure it/s and memory.
-5. Full runs: A, D, E, then B, C, F, G, H. Three seeds for A/D/E.
+3. Run D, E, then B, C, F, G, H with the same 4000-iter recipe. Three seeds for D/E.
+   Check D's schedule length on val too (a new patch embed may want a different length; keep it
+   the same for all configs or document why not).
+4. Modal volume `afa-bin5` (L4 account) holds the cache for parallel runs; nothing launched there yet.
 6. Delete the zips in `~/data/afa/` once prepare is verified.
 
 ## Untested / open questions
@@ -52,4 +61,13 @@ _Last updated: 2026-10-03_
 - Throughput and memory for ViT-S at 448 crops / batch 8 with the 60-band input.
 
 ## Results
-_(fill in: config, seed, val FO-IoU, test FO-IoU / F1 / img-recall / img-FPR, trainable params, FPS)_
+Params: 23.57M total, 8.97M trainable (ViT-S/14 reg4, RGB). Test eval ~14 Mpix/s (full cube, sliding window).
+
+| config | seed | val FO-IoU (best) | test FO-IoU | test F1 | test P / R | img-recall | img-FPR |
+|---|---|---|---|---|---|---|---|
+| A rgb_eomt | 0 | 0.814 | 0.804 | 0.891 | 0.905 / 0.878 | 1.00 | 0.33 |
+| A rgb_eomt | 1 | 0.818 | 0.806 | 0.892 | 0.922 / 0.865 | 1.00 | 1.00 |
+| A rgb_eomt | 2 | 0.775 | 0.753 | 0.859 | 0.924 / 0.803 | 1.00 | 0.33 |
+| **A mean ± std** | | 0.803 ± 0.024 | **0.787 ± 0.030** | 0.881 ± 0.019 | 0.917 / 0.848 | 1.00 | 0.56 ± 0.39 |
+
+img-FPR is over only 3 anomaly-free test images (1 in val), so it is very noisy.
