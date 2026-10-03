@@ -15,6 +15,10 @@ _Last updated: 2026-10-03_
       `Annotation/{JSON,PNG}/`, **no RGB folder**. `prepare.py` fixed to resolve `<split>_*` folders
       and synthesize true-colour RGB (2026-10-03).
 
+- [x] Checked the dataset's GitHub repo (2026-10-03): no RGB conversion utility and no separate RGB
+      download; cubes are reflectance-calibrated (their loader divides by `reflectance scale factor`).
+      Their `json2png.py` revealed Label Studio names drop the parentheses; matching fixed.
+
 ## In progress
 - [ ] Extracting zips into `data/raw/` (needs `UNZIP_DISABLE_ZIPBOMB_DETECTION=TRUE`; plain unzip
       aborts with a false "zip bomb" error).
@@ -35,7 +39,6 @@ _Last updated: 2026-10-03_
 - Real-release folder names and JSON format (see AGENTS.md "fragile" section).
 - The synthesized true-colour RGB uses a per-image percentile stretch. Check a few by eye, and
   decide whether a global stretch is fairer for the RGB baseline.
-- Whether cubes are reflectance-calibrated (check the `.hdr` and the value ranges).
 - Throughput and memory for ViT-S at 448 crops / batch 8 with the 60-band input.
 
 ## Results
