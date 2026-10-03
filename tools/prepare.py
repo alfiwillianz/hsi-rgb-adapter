@@ -126,9 +126,50 @@ def load_mask(path: str | None, H: int, W: int) -> np.ndarray:
         return np.zeros((H, W), np.uint8)
     m = Image.open(path).convert("L")
     if m.size != (W, H):
+        if not np.asarray(m).any():
+            # release ships anomaly-free masks as blank (transposed) RGB PNGs; nothing to misalign
+            return np.zeros((H, W), np.uint8)
         # never resize labels silently: a transposed or cropped mask would scramble them
         raise ValueError(f"{path}: mask is {m.size[0]}x{m.size[1]} (WxH) but cube is {W}x{H}")
     return (np.array(m) > 127).astype(np.uint8)
+
+
+# shape-swapping dihedral transforms (the release ships some RGB PNGs transposed vs. their cube)
+_SWAP = {
+    "transpose": lambda a: a.swapaxes(0, 1),
+    "anti_transpose": lambda a: a.swapaxes(0, 1)[::-1, ::-1],
+    "rot90": lambda a: np.rot90(a),
+    "rot270": lambda a: np.rot90(a, 3),
+}
+
+
+def _small_gray(a: np.ndarray) -> np.ndarray:
+    a = np.asarray(a, np.float32)
+    a = a / max(float(np.percentile(a, 99.5)), 1e-6)
+    return np.asarray(Image.fromarray((np.clip(a, 0, 1) * 255).astype(np.uint8)).resize((90, 100), Image.BOX), np.float32)
+
+
+def _corr(a: np.ndarray, b: np.ndarray) -> float:
+    a, b = a - a.mean(), b - b.mean()
+    return float((a * b).sum() / max(np.sqrt((a * a).sum() * (b * b).sum()), 1e-6))
+
+
+def orient_rgb(rgb: np.ndarray, cube, min_corr: float = 0.9) -> tuple[np.ndarray, str]:
+    """Return rgb as (H, W, 3) matching the cube. Fix a transposed PNG by picking the transform whose
+    green channel best correlates with a cube band; refuse unless it clearly matches."""
+    C, H, W = cube.shape
+    if rgb.shape[:2] == (H, W):
+        return rgb, "none"
+    ref = _small_gray(cube[int(C * 0.3)])
+    scores = {}
+    for name, f in _SWAP.items():
+        t = f(rgb)
+        if t.shape[:2] == (H, W):
+            scores[name] = _corr(ref, _small_gray(t[..., 1]))
+    best = max(scores, key=scores.get) if scores else None
+    if best is None or scores[best] < min_corr:
+        raise ValueError(f"RGB {rgb.shape[1]}x{rgb.shape[0]} (WxH) does not match cube {W}x{H}: scores={scores}")
+    return np.ascontiguousarray(_SWAP[best](rgb)), best
 
 
 def bin_cube(cube, out_path: str, b: int, chunk: int = 64) -> int:
@@ -137,7 +178,7 @@ def bin_cube(cube, out_path: str, b: int, chunk: int = 64) -> int:
     out = np.lib.format.open_memmap(out_path, mode="w+", dtype=np.float16, shape=(Cb, H, W))
     for y in range(0, H, chunk):
         blk = np.asarray(cube[: Cb * b, y : y + chunk, :], dtype=np.float32)
-        out[:, y : y + chunk, :] = blk.reshape(Cb, b, -1, W).mean(1).astype(np.float16)
+        out[:, y : y + chunk, :] = blk.reshape(Cb, b, -1, W).mean(1).clip(0, np.finfo(np.float16).max).astype(np.float16)
     out.flush()
     return Cb
 
@@ -206,15 +247,13 @@ def main():
                 src = "components" if n else "empty"
             Image.fromarray(inst).save(os.path.join(od, stem + "_inst.png"))
 
-            rgb_path = None
+            rgb_path, rgb_transform = None, None
             if rgb_dir:
                 cand = os.path.join(rgb_dir, stem + ".png")
                 if os.path.exists(cand):
-                    im = Image.open(cand).convert("RGB")
-                    if im.size != (W, H):
-                        raise ValueError(f"{cand}: RGB is {im.size[0]}x{im.size[1]} (WxH) but cube is {W}x{H}")
+                    arr, rgb_transform = orient_rgb(np.array(Image.open(cand).convert("RGB")), cube)
                     rgb_path = stem + "_rgb.png"
-                    im.save(os.path.join(od, rgb_path))
+                    Image.fromarray(arr).save(os.path.join(od, rgb_path))
             rgb_source = "release" if rgb_path else "synthesized_truecolor"
             if rgb_path is None:
                 rgb_path = stem + "_rgb.png"
@@ -222,10 +261,11 @@ def main():
             samples.append({
                 "stem": stem, "H": H, "W": W, "fg_pixels": int(mask.sum()),
                 "num_instances": int(inst.max()), "instance_labels": inst_labels,
-                "instance_source": src, "rgb": rgb_path, "rgb_source": rgb_source,
+                "instance_source": src, "rgb": rgb_path, "rgb_source": rgb_source, "rgb_transform": rgb_transform,
             })
             print(f"[{split}] {stem}: {C}->{Cb} bands, {H}x{W}, fg={mask.mean():.4f}, "
-                  f"inst={inst.max()} ({src}), rgb={rgb_source}", flush=True)
+                  f"inst={inst.max()} ({src}), rgb={rgb_source}"
+                  + (f" [{rgb_transform}]" if rgb_transform not in (None, "none") else ""), flush=True)
         meta["splits"][split] = samples
         meta["num_bands"] = Cb if samples else meta.get("num_bands")
 
