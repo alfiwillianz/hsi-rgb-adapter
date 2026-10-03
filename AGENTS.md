@@ -44,9 +44,10 @@ tools/
   reached over SSH/Tailscale. One GPU, so run experiments sequentially.
 - Repo lives at `~/Active/hsi-rgb-adapter` (SSD with DRAM). Data sits inside it under the
   git-ignored `data/`:
-  - raw release: `data/raw/{train,val,test}_UseCase_1_(Avoine1)/` with `HSI-Hybercube/` and
-    `Annotation/{JSON,PNG}/`. There are **no RGB projections** in the release; `prepare.py`
-    synthesizes a true-colour composite (`rgb_source: synthesized_truecolor` in `meta.json`).
+  - raw release: `data/raw/{train,val,test}_UseCase_1_(Avoine1)/` with `HSI-Hybercube/` (ENVI BIL,
+    uint16 reflectance ×10000, 300 bands from 381 nm, lines=1000 × samples=900), `Annotation/{JSON,PNG}/`
+    (binary masks, one per cube incl. anomaly-free) and `RGB/{PNG,TIFF}/`. If RGB is missing,
+    `prepare.py` synthesizes a true-colour composite (`rgb_source` in `meta.json`).
   - prepared cache: `data/afa_bin5/`, which is the default `data.root` in `configs/base.yaml`.
 - Zips downloaded to `~/data/afa/` (MD5-verified; delete after prepare succeeds).
 - Unzipping needs `UNZIP_DISABLE_ZIPBOMB_DETECTION=TRUE` (Info-ZIP false positive on these ZIP64

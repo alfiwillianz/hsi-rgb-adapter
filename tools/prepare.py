@@ -126,7 +126,8 @@ def load_mask(path: str | None, H: int, W: int) -> np.ndarray:
         return np.zeros((H, W), np.uint8)
     m = Image.open(path).convert("L")
     if m.size != (W, H):
-        m = m.resize((W, H), Image.NEAREST)
+        # never resize labels silently: a transposed or cropped mask would scramble them
+        raise ValueError(f"{path}: mask is {m.size[0]}x{m.size[1]} (WxH) but cube is {W}x{H}")
     return (np.array(m) > 127).astype(np.uint8)
 
 
@@ -211,7 +212,7 @@ def main():
                 if os.path.exists(cand):
                     im = Image.open(cand).convert("RGB")
                     if im.size != (W, H):
-                        im = im.resize((W, H), Image.BILINEAR)
+                        raise ValueError(f"{cand}: RGB is {im.size[0]}x{im.size[1]} (WxH) but cube is {W}x{H}")
                     rgb_path = stem + "_rgb.png"
                     im.save(os.path.join(od, rgb_path))
             rgb_source = "release" if rgb_path else "synthesized_truecolor"

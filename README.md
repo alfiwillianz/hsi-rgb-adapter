@@ -10,8 +10,7 @@ survive the shift from RGB to 300-band VNIR spectra, and what is the smallest ch
 recovers the spectral information RGB cannot express?
 
 Target data: HSI-AgriFoodAnomaly [4]
-(147 conveyor cubes, 400–1000 nm, 300 bands, 1000×900, pixel masks + polygons). The release has
-no RGB images, so the RGB baseline uses a true-colour composite synthesized from the cube.
+(147 conveyor cubes, 400–1000 nm, 300 bands, 1000×900, pixel masks + polygons, paired RGB images).
 
 ## Model
 
@@ -69,7 +68,7 @@ python train.py --config configs/smoke.yaml
 
 | id | config | input | what trains | question |
 |----|--------|-------|-------------|----------|
-| A | `rgb_eomt` | true-colour composite | query blocks + heads | RGB reference |
+| A | `rgb_eomt` | shipped RGB | query blocks + heads | RGB reference |
 | B | `pca3_eomt` | PCA→3 | same | naive HSI→RGB |
 | C | `hsi_pe_only` | HSI | patch embed + queries + heads (cf. Panopticon-PE [12]) | frozen ViT (PMT [13] predicts collapse) |
 | D | `hsi_last_blocks` | HSI | patch embed + query blocks | simplest spectral EoMT |

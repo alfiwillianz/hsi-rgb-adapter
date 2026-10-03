@@ -9,22 +9,22 @@ _Last updated: 2026-10-03_
 - [x] `tools/smoke_test.py` passes on hal9000 (RTX 5060 Ti): inflation preserves RGB response,
       spectral branch is a no-op at init, shapes OK, LoRA trainability OK, loss 44.6 → 0.76 on a
       fixed batch, annealing ends at plain attention.
-
 - [x] Dataset downloaded to `~/data/afa/` (train 37 GiB, val 7 GiB, test 17 GiB), MD5 checked.
-- [x] Release layout seen: `{train,val,test}_UseCase_1_(Avoine1)/` with `HSI-Hybercube/` and
-      `Annotation/{JSON,PNG}/`, **no RGB folder**. `prepare.py` fixed to resolve `<split>_*` folders
-      and synthesize true-colour RGB (2026-10-03).
-
-- [x] Checked the dataset's GitHub repo (2026-10-03): no RGB conversion utility and no separate RGB
-      download; cubes are reflectance-calibrated (their loader divides by `reflectance scale factor`).
+- [x] Release layout verified (2026-10-03): `{train,val,test}_UseCase_1_(Avoine1)/` with
+      `HSI-Hybercube/`, `Annotation/{JSON,PNG}/` and `RGB/{PNG,TIFF}/`. Cubes: BIL uint16, reflectance
+      ×10000, 300 bands from 381.3 nm, lines=1000 × samples=900; masks match (900×1000 WxH, 0/255,
+      89 masks for 89 train cubes). `prepare.py` resolves `<split>_*` folders and now refuses
+      size-mismatched masks/RGB instead of resizing.
+- [x] Checked the dataset's GitHub repo (2026-10-03): no RGB conversion utility (RGB ships inside
+      the zips); cubes are reflectance-calibrated (their loader divides by `reflectance scale factor`).
       Their `json2png.py` revealed Label Studio names drop the parentheses; matching fixed.
+- [x] Zips extracted into `data/raw/` (needed `UNZIP_DISABLE_ZIPBOMB_DETECTION=TRUE`).
 
 ## In progress
-- [ ] Extracting zips into `data/raw/` (needs `UNZIP_DISABLE_ZIPBOMB_DETECTION=TRUE`; plain unzip
-      aborts with a false "zip bomb" error).
+- [ ] Running `prepare.py` on the real data.
 
 ## Next
-1. After extraction, confirm there is still no `RGB/` folder (`find data/raw -maxdepth 3 -type d`).
+1. Confirm val/test also have `RGB/PNG` and one mask per cube.
 2. `python tools/prepare.py --root data/raw --out data/afa_bin5 --bin 5`. Verify in the log: every cube says
    `(polygons)`, the material label list (decides whether `class_mode: material` is possible), fg
    fractions look sane, `rgb=` matches expectations, and `meta.json` has
@@ -37,8 +37,8 @@ _Last updated: 2026-10-03_
 
 ## Untested / open questions
 - Real-release folder names and JSON format (see AGENTS.md "fragile" section).
-- The synthesized true-colour RGB uses a per-image percentile stretch. Check a few by eye, and
-  decide whether a global stretch is fairer for the RGB baseline.
+- Whether the shipped RGB PNGs are pixel-aligned with the cubes (same size is enforced). Visually
+  check one overlay of RGB + mask.
 - Throughput and memory for ViT-S at 448 crops / batch 8 with the 60-band input.
 
 ## Results
