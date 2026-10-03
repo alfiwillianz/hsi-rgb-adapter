@@ -37,7 +37,7 @@ to work on HSI, and where it breaks.
 |---|---|---|
 | HSI-Adapter (2025) | frozen ViT + spectral transformer→3ch + ViT-Adapter interaction + decoder | heavy; we are encoder-only, no adapter |
 | HyperSAM (2026) | frozen SAM3 + trainable HSI side encoder, zero-init injection | promptable, side ViT, remote sensing |
-| EoSeg (arXiv 2607.00223) | encoder-only seg, compares DINOv2 vs a remote-sensing FM | RGB remote sensing, not HSI |
+| EoSeg (arXiv 2607.00223) | encoder-only ViT seg for medical images; compares DINOv2/v3, SigLIP and a remote-sensing FM as backbones | medical RGB, not HSI |
 | PMT (2026) | light decoder on frozen VFM features | frozen encoder; baseline candidate |
 | Panopticon | any-sensor DINOv2, channel cross-attention patch embed; "-PE" retrains only the patch embed | pretraining-scale; our C is the PE-only analogue |
 | DOFA | wavelength-conditioned hypernetwork patch embed | foundation model, not adaptation |
