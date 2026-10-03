@@ -20,6 +20,7 @@ import argparse
 import glob
 import json
 import os
+import re
 import sys
 
 import numpy as np
@@ -91,13 +92,20 @@ def load_label_studio(json_dir: str | None) -> dict[str, list[dict]]:
     return out
 
 
+def _norm_name(name: str) -> str:
+    # Label Studio stores "<hash>-UseCase_1_Avoine1_..." (prefix added, parentheses dropped) for a
+    # cube named "UseCase_1_(Avoine1)_..."; compare names with parentheses removed.
+    return re.sub(r"[()]", "", name)
+
+
 def match_polys(stem: str, table: dict[str, list[dict]]) -> list[dict] | None:
     if stem in table:
         return table[stem]
-    for k, v in table.items():  # Label Studio sometimes prefixes "<hash>-"
-        if k.endswith(stem) or stem.endswith(k):
-            return v
-    return None
+    ns = _norm_name(stem)
+    hits = [v for k, v in table.items() if _norm_name(k) == ns or _norm_name(k).endswith("-" + ns)]
+    if len(hits) > 1:
+        raise RuntimeError(f"Ambiguous polygon match for {stem}")
+    return hits[0] if hits else None
 
 
 def rasterize(polys: list[dict], H: int, W: int, label_ids: dict[str, int]):
@@ -194,7 +202,7 @@ def main():
                 inst, n = ndimage.label(mask, structure=np.ones((3, 3)))
                 inst = inst.astype(np.uint16)
                 inst_labels = [0] * int(n)
-                src = "components"
+                src = "components" if n else "empty"
             Image.fromarray(inst).save(os.path.join(od, stem + "_inst.png"))
 
             rgb_path = None

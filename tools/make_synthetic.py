@@ -62,7 +62,9 @@ def main():
             rgb = cube[vis].transpose(1, 2, 0)
             rgb = ((rgb - rgb.min()) / (np.ptp(rgb) + 1e-6) * 255).astype(np.uint8)
             Image.fromarray(rgb).save(os.path.join(d, "RGB/PNG", stem + ".png"))
-            items.append({"image": f"/data/upload/1/abc123-{stem}.png", "label": labels})
+            # mimic Label Studio export: "<hash>-" prefix and parentheses stripped from the name
+            ls_name = "abc123-" + stem.replace("(", "").replace(")", "")
+            items.append({"image": f"/data/upload/1/{ls_name}.png", "label": labels})
         with open(os.path.join(d, "Annotation/JSON", f"{split}_synthetic.json"), "w") as f:
             json.dump(items, f)
     print("wrote", args.out)
