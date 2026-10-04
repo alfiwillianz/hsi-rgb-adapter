@@ -71,8 +71,10 @@ _Last updated: 2026-10-05_
 ## Untested / open questions
 - Real-release folder names and JSON format (see AGENTS.md "fragile" section).
 - The 20k-iter RGB collapse (see A above) is unexplained; the recipe is only validated at 4000 iters.
-- HSI test inference was 2.3-2.7 Mpix/s vs ~14 for RGB (reading 60-band memmaps, probably I/O bound,
-  not the model). Re-measure FPS with the cache warm / in RAM before quoting it.
+- Decision (2026-10-05, owner): no inference-speed / FPS comparison. The research question is whether the
+  pretrained ViT adapts to HSI, so params and trainable params are enough. (AGENTS.md still mentions
+  FPS and the HSI-Adapter efficiency comparison; update it if this is final.) Note HSI test eval ran at
+  2.3-2.7 Mpix/s vs ~14 for RGB, probably I/O bound.
 - Training speed: RGB ~4.9 it/s, HSI ~3.9 it/s (ViT-S, 448 crops, batch 8).
 
 ## Results
